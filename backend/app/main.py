@@ -43,7 +43,11 @@ app.include_router(dashboard.router, prefix="/api")
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    s = get_settings()
+    return {
+        "status": "ok",
+        "auth_configured": bool(s.ALLOWED_USERNAME and s.ALLOWED_PASSWORD),
+    }
 
 
 # Serve frontend static files when built (Cloud Run)

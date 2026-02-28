@@ -58,7 +58,8 @@ Share the sheet with your **Google Service Account** email (from credentials.jso
 ### 4. API Keys
 
 - **Google Sheets**: Create a service account in Google Cloud Console, enable Sheets API, download JSON key.
-- **GNews**: Free key at [gnews.io](https://gnews.io/).
+- **Google Gemini**: For AI summarization & YouTube analysis. Free key at [Google AI Studio](https://aistudio.google.com/apikey).
+- **GNews**: Free key at [gnews.io](https://gnews.io/) for news fetching.
 - **YouTube**: Enable YouTube Data API v3 in Google Cloud Console, create an API key.
 
 ## Deploy to Google Cloud Run

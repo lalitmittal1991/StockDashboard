@@ -1,23 +1,11 @@
 """YouTube service for fetching channel videos and analyzing transcripts."""
 from datetime import datetime, timedelta
-import re
 import httpx
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
 
 from app.models.dashboard import YouTubeVideo, YouTubeRecommendation
-
-
-# Keywords that suggest stock recommendations
-RECOMMENDATION_KEYWORDS = {
-    "buy": ["buy", "bullish", "accumulate", "strong buy", "outperform", "undervalued"],
-    "sell": ["sell", "bearish", "avoid", "reduce", "overvalued", "underperform"],
-    "hold": ["hold", "neutral", "wait", "watch"],
-    "mention": ["stock", "share", "ticker", "invest", "investment", "earnings"],
-}
-
-# Common stock ticker pattern (1-5 uppercase letters)
-TICKER_PATTERN = re.compile(r"\b([A-Z]{1,5})\b")
+from app.services.gemini_service import analyze_transcript_for_stocks as gemini_analyze
 
 
 async def get_channel_id_from_name(api_key: str, channel_name: str) -> str | None:
@@ -134,50 +122,27 @@ def fetch_transcript(video_id: str) -> str:
         return ""
 
 
-def extract_stock_recommendations(
+async def _extract_recommendations_with_gemini(
     transcript: str,
     video: YouTubeVideo,
     watch_symbols: set[str],
 ) -> list[YouTubeRecommendation]:
-    """
-    Extract potential stock recommendations from transcript.
-    Uses keyword matching and ticker detection - can be enhanced with LLM.
-    """
-    transcript_lower = transcript.lower()
-    recommendations = []
-
-    for symbol in watch_symbols:
-        sym_lower = symbol.lower()
-        if sym_lower not in transcript_lower:
-            continue
-
-        # Find context around symbol
-        idx = transcript_lower.find(sym_lower)
-        start = max(0, idx - 100)
-        end = min(len(transcript), idx + len(symbol) + 100)
-        context = transcript[start:end]
-
-        rec_type = "mention"
-        confidence = "low"
-        for rec_type_key, keywords in RECOMMENDATION_KEYWORDS.items():
-            for kw in keywords:
-                if kw in context.lower():
-                    rec_type = rec_type_key
-                    confidence = "medium" if rec_type in ("buy", "sell") else "low"
-                    break
-
-        recommendations.append(
-            YouTubeRecommendation(
-                symbol=symbol,
-                recommendation_type=rec_type,
-                context=context[:200] + "..." if len(context) > 200 else context,
-                confidence=confidence,
-                video=video,
-                extracted_at=datetime.utcnow(),
+    """Extract stock recommendations using Google Gemini."""
+    recs = await gemini_analyze(transcript, watch_symbols, video.title)
+    result = []
+    for r in recs:
+        if isinstance(r, dict) and r.get("symbol", "").upper() in {s.upper() for s in watch_symbols}:
+            result.append(
+                YouTubeRecommendation(
+                    symbol=r.get("symbol", "").upper(),
+                    recommendation_type=r.get("recommendation_type", "mention"),
+                    context=r.get("context", ""),
+                    confidence=r.get("confidence", "low"),
+                    video=video,
+                    extracted_at=datetime.utcnow(),
+                )
             )
-        )
-
-    return recommendations
+    return result
 
 
 async def analyze_channel_for_stocks(
@@ -208,6 +173,6 @@ async def analyze_channel_for_stocks(
         transcript = fetch_transcript(v.video_id)
         if transcript:
             v.transcript_preview = transcript[:300] + "..." if len(transcript) > 300 else transcript
-            recs = extract_stock_recommendations(transcript, v, watch_symbols)
+            recs = await _extract_recommendations_with_gemini(transcript, v, watch_symbols)
             all_recs.extend(recs)
     return all_recs

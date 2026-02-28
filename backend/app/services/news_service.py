@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 import httpx
 from app.models.dashboard import NewsArticle, NewsSummary
+from app.services.gemini_service import summarize_news
 
 # GNews API - https://gnews.io/
 GNEWS_BASE = "https://gnews.io/api/v4"
@@ -53,6 +54,7 @@ async def fetch_stock_news(
             )
 
     articles = []
+    raw_articles = []
     for item in data.get("articles", [])[:max_articles]:
         articles.append(
             NewsArticle(
@@ -64,17 +66,18 @@ async def fetch_stock_news(
                 sentiment=None,
             )
         )
+        raw_articles.append({"title": item.get("title", ""), "description": item.get("description", "")})
 
-    # Simple summary from titles and descriptions
-    summary_parts = []
-    for a in articles[:5]:
-        summary_parts.append(f"- {a.title}")
-    summary = "\n".join(summary_parts) if summary_parts else "No recent news found."
+    # Use Google Gemini for summarization
+    summary, sentiment_overview = await summarize_news(symbol, raw_articles)
+    if "not configured" in summary.lower() or "failed" in summary.lower():
+        summary = "\n".join(f"- {a.title}" for a in articles[:5]) if articles else "No recent news found."
+        sentiment_overview = "Add GEMINI_API_KEY for AI summary."
 
     return NewsSummary(
         symbol=symbol,
         articles=articles,
-        summary=summary,
-        sentiment_overview="Review articles for sentiment.",
+        summary=summary or "No recent news found.",
+        sentiment_overview=sentiment_overview,
         fetched_at=datetime.utcnow(),
     )

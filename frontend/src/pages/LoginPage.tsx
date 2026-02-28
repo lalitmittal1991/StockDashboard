@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { login, register } from '../api/client'
+import { login } from '../api/client'
 
 export default function LoginPage() {
-  const [isRegister, setIsRegister] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -17,14 +16,8 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      if (isRegister) {
-        await register(username, password)
-        setError('')
-        setToken((await login(username, password)).access_token)
-      } else {
-        const { access_token } = await login(username, password)
-        setToken(access_token)
-      }
+      const { access_token } = await login(username, password)
+      setToken(access_token)
       navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -89,18 +82,7 @@ export default function LoginPage() {
             disabled={loading}
             className="mt-6 w-full py-3 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Please wait...' : isRegister ? 'Register' : 'Login'}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setIsRegister(!isRegister)
-              setError('')
-            }}
-            className="mt-4 w-full text-sm text-slate-400 hover:text-slate-300 transition"
-          >
-            {isRegister ? 'Already have an account? Login' : "Don't have an account? Register"}
+            {loading ? 'Please wait...' : 'Login'}
           </button>
         </form>
       </div>

@@ -25,19 +25,6 @@ export async function login(username: string, password: string) {
   return res.json();
 }
 
-export async function register(username: string, password: string) {
-  const res = await fetch(`${API_BASE}/auth/register`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ username, password }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Registration failed' }));
-    throw new Error(err.detail || 'Registration failed');
-  }
-  return res.json();
-}
-
 export async function fetchDashboard(spreadsheetId: string, stocksRange?: string, youtubeRange?: string) {
   const res = await fetch(`${API_BASE}/dashboard/fetch`, {
     method: 'POST',
