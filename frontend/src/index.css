@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-surface: 15 23 42;
+  --color-surface-elevated: 30 41 59;
+  --color-accent: 59 130 246;
+  --color-success: 16 185 129;
+  --color-danger: 239 68 68;
+  --color-warning: 245 158 11;
+}
+
+body {
+  @apply bg-surface-900 text-slate-100 font-sans antialiased;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-surface-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-500;
+}
