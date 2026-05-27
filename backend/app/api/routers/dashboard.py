@@ -82,7 +82,7 @@ async def fetch_dashboard(
                 symbol=stock.symbol,
                 api_key=settings.GNEWS_API_KEY,
                 days_back=7,
-                max_articles=2,
+                max_articles=5,
             )
             news_map[stock.symbol] = result
         except Exception as e:

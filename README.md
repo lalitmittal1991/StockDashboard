@@ -49,6 +49,67 @@ Hybrid access is supported:
 - Private sheet: share with service account email (Viewer).
 - Public sheet: no sharing needed, just pass Sheet ID.
 
+## Google Sheets Setup (Private Mode - Service Account)
+
+Use this when you want the sheet to stay private.
+
+1. Create a Google Cloud service account
+   - Open Google Cloud Console -> IAM & Admin -> Service Accounts
+   - Create service account (for example: `stock-dashboard-reader`)
+2. Enable Sheets API in the same project
+   - APIs & Services -> Library -> enable **Google Sheets API**
+3. Create a JSON key
+   - Service account -> Keys -> Add key -> Create new key -> JSON
+   - Download and place file at:
+     - `backend/credentials.json` (local), or
+     - use base64 into `GOOGLE_SHEETS_CREDENTIALS_JSON` (cloud)
+4. Share your Google Sheet
+   - Open the target Google Sheet -> Share
+   - Add the service account email (looks like `...@....iam.gserviceaccount.com`)
+   - Role: `Viewer`
+5. Verify sheet format
+   - Tab name must be `Stocks`
+   - Data starts from row 2 with columns:
+     - A: Symbol
+     - B: Name
+6. Set env and test
+   - Set `GOOGLE_SHEETS_CREDENTIALS_PATH=credentials.json`
+   - Open dashboard, paste Sheet ID, click `Fetch Dashboard`
+
+## Google Sheets Setup (Public Mode - Sheet ID Only)
+
+Use this when you want zero credential setup for users.
+
+1. Prepare the sheet
+   - Tab name: `Stocks`
+   - Columns:
+     - A: Symbol
+     - B: Name
+2. Make sheet publicly readable
+   - Open Google Sheet -> Share
+   - Set **General access** to one of:
+     - `Anyone with the link` (Viewer), or
+     - `Anyone on the internet` (Viewer)
+3. Copy Sheet ID
+   - From URL:
+     - `https://docs.google.com/spreadsheets/d/<SHEET_ID>/edit`
+4. Leave credentials unset (optional but recommended in this mode)
+   - Do not set `GOOGLE_SHEETS_CREDENTIALS_PATH` / `GOOGLE_SHEETS_CREDENTIALS_JSON`, or keep invalid/empty
+   - Backend auto-falls back to public CSV fetch
+5. Test
+   - Paste Sheet ID in dashboard and click `Fetch Dashboard`
+
+### Quick Troubleshooting
+
+- Error: `Could not read sheet...`
+  - Private mode: verify service account is shared on the sheet and JSON key is valid
+  - Public mode: verify sheet access is public and Sheet ID is correct
+- Empty stocks list:
+  - Ensure tab is exactly `Stocks`
+  - Ensure symbols are in column `A` and not only header row
+- Wrong tab name:
+  - If you use a different tab name, pass `stocks_range` accordingly from API client
+
 ## Environment Variables (Backend)
 
 Create `backend/.env`:

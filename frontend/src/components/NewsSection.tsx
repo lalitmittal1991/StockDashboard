@@ -5,27 +5,21 @@ interface Props {
 }
 
 function buildPortfolioSummary(news: Record<string, NewsSummary>) {
-  const positives: string[] = []
-  const negatives: string[] = []
-  const risky: string[] = []
-  const riskTerms = [
-    'risk', 'volatile', 'volatility', 'lawsuit', 'investigation',
-    'downgrade', 'fraud', 'debt', 'default', 'warning', 'cut guidance',
-  ]
+  const negativePointers: string[] = []
 
   for (const [symbol, summary] of Object.entries(news)) {
     const sentiment = summary.sentiment_overview.toLowerCase()
-    const text = `${summary.sentiment_overview} ${summary.summary}`.toLowerCase()
-
-    if (sentiment.includes('positive')) positives.push(symbol)
-    if (sentiment.includes('negative') || sentiment.includes('error')) negatives.push(symbol)
-    if (riskTerms.some((term) => text.includes(term))) risky.push(symbol)
+    if (sentiment.includes('negative') || sentiment.includes('error')) {
+      const point = summary.summary
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 180)
+      negativePointers.push(`${symbol}: ${point}${summary.summary.length > 180 ? '...' : ''}`)
+    }
   }
 
   return {
-    positives: [...new Set(positives)],
-    negatives: [...new Set(negatives)],
-    risky: [...new Set(risky)],
+    negativePointers,
   }
 }
 
@@ -36,26 +30,17 @@ export default function NewsSection({ news }: Props) {
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-white mb-4">Portfolio Summary</h2>
-      <div className="grid gap-4 sm:grid-cols-3 mb-8">
-        <div className="rounded-xl bg-green-500/10 border border-green-500/30 p-4">
-          <p className="text-xs uppercase tracking-wider text-green-300">Positives</p>
-          <p className="text-sm text-green-100 mt-2">
-            {summary.positives.length ? summary.positives.join(', ') : 'No strong positive signals detected'}
-          </p>
-        </div>
-        <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-4">
-          <p className="text-xs uppercase tracking-wider text-red-300">Negatives</p>
-          <p className="text-sm text-red-100 mt-2">
-            {summary.negatives.length ? summary.negatives.join(', ') : 'No major negative signals detected'}
-          </p>
-        </div>
-        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-4">
-          <p className="text-xs uppercase tracking-wider text-amber-300">Risky</p>
-          <p className="text-sm text-amber-100 mt-2">
-            {summary.risky.length ? summary.risky.join(', ') : 'No elevated risk signals detected'}
-          </p>
-        </div>
+      <h2 className="text-lg font-semibold text-white mb-4">Top Negative News Summary</h2>
+      <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-4 mb-8">
+        {summary.negativePointers.length ? (
+          <ul className="space-y-2 text-sm text-red-100 list-disc pl-5">
+            {summary.negativePointers.map((item, idx) => (
+              <li key={idx}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-red-100">No major negative signals detected across tracked stocks.</p>
+        )}
       </div>
 
       <h2 className="text-lg font-semibold text-white mb-4">News Summary (Last 7 Days)</h2>
@@ -80,7 +65,7 @@ export default function NewsSection({ news }: Props) {
                   <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
                     Articles
                   </p>
-                  {summary.articles.slice(0, 2).map((a, i) => (
+                  {summary.articles.slice(0, 5).map((a, i) => (
                     <a
                       key={i}
                       href={a.url}
