@@ -1,4 +1,4 @@
-"""Google Sheets service for fetching stock and YouTube channel data."""
+"""Google Sheets service for fetching stock data."""
 import json
 import base64
 from datetime import datetime
@@ -9,7 +9,7 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from app.models.dashboard import StockHolding, YouTubeChannel, SheetConfig
+from app.models.dashboard import StockHolding
 
 # Required scopes
 SCOPES = [
@@ -35,19 +35,14 @@ async def fetch_sheet_data(
     spreadsheet_id: str,
     credentials_path: str = "credentials.json",
     credentials_json: Optional[str] = None,
-    stocks_range: str = "Stocks!A2:E",
-    youtube_range: str = "YouTube!A2:B",
-) -> tuple[list[StockHolding], list[YouTubeChannel], datetime]:
+    stocks_range: str = "Stocks!A2:B",
+) -> tuple[list[StockHolding], datetime]:
     """
-    Fetch stocks and YouTube channels from Google Sheet.
+    Fetch stocks from Google Sheet.
 
     Expected Stocks sheet format:
-    | Symbol | Name | Avg Price | Qty | (optional columns) |
-    | AAPL   | Apple Inc | 150.5 | 10 |
-
-    Expected YouTube sheet format:
-    | Channel Name | Channel ID/URL |
-    | @channelname | UCxxxxxx or https://youtube.com/@channel |
+    | Symbol | Name |
+    | AAPL   | Apple Inc |
     """
     creds = _get_credentials(credentials_path, credentials_json)
     if not creds:
@@ -60,7 +55,6 @@ async def fetch_sheet_data(
     sheet = service.spreadsheets()
 
     stocks: list[StockHolding] = []
-    youtube_channels: list[YouTubeChannel] = []
     last_updated = datetime.utcnow()
 
     try:
@@ -72,46 +66,13 @@ async def fetch_sheet_data(
         rows = result.get("values", [])
 
         for row in rows:
-            if len(row) >= 4:
-                try:
-                    symbol = str(row[0]).strip().upper()
-                    name = str(row[1]).strip() if len(row) > 1 else symbol
-                    avg_price = float(str(row[2]).replace(",", "").strip())
-                    qty = int(float(str(row[3]).replace(",", "").strip()))
-                    if symbol and qty > 0:
-                        stocks.append(
-                            StockHolding(
-                                symbol=symbol,
-                                name=name,
-                                avg_price=avg_price,
-                                quantity=qty,
-                                total_invested=round(avg_price * qty, 2),
-                            )
-                        )
-                except (ValueError, TypeError):
-                    continue
-
-        # Fetch YouTube channels
-        yt_result = sheet.values().get(
-            spreadsheetId=spreadsheet_id,
-            range=youtube_range,
-        ).execute()
-        yt_rows = yt_result.get("values", [])
-
-        for row in yt_rows:
             if len(row) >= 1:
-                channel_name = str(row[0]).strip()
-                channel_id = str(row[1]).strip() if len(row) > 1 else None
-                if channel_name:
-                    youtube_channels.append(
-                        YouTubeChannel(
-                            channel_name=channel_name,
-                            channel_id=channel_id,
-                            channel_url=channel_id if channel_id and channel_id.startswith("http") else None,
-                        )
-                    )
+                symbol = str(row[0]).strip().upper()
+                name = str(row[1]).strip() if len(row) > 1 else symbol
+                if symbol:
+                    stocks.append(StockHolding(symbol=symbol, name=name))
 
     except HttpError as e:
         raise ValueError(f"Google Sheets API error: {e}") from e
 
-    return stocks, youtube_channels, last_updated
+    return stocks, last_updated

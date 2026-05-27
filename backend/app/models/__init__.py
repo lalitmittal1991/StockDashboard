@@ -2,10 +2,8 @@
 from app.models.user import User, UserCreate, UserInDB, Token, TokenData
 from app.models.dashboard import (
     StockHolding,
-    YouTubeChannel,
     SheetConfig,
     NewsSummary,
-    YouTubeRecommendation,
 )
 
 __all__ = [
@@ -15,8 +13,6 @@ __all__ = [
     "Token",
     "TokenData",
     "StockHolding",
-    "YouTubeChannel",
     "SheetConfig",
     "NewsSummary",
-    "YouTubeRecommendation",
 ]

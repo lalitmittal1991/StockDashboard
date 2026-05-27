@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="Private stock dashboard with news and YouTube analysis",
+    description="Private stock dashboard with news analysis",
     version="1.0.0",
     lifespan=lifespan,
 )

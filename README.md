@@ -1,106 +1,165 @@
-# Stock Dashboard
+# Stock News Dashboard
 
-A private dashboard that pulls your stock holdings from Google Sheets, fetches the latest news (last 14 days), and analyzes YouTube channel transcripts for stock recommendations. Deployable to Google Cloud Run with username/password login.
+A lightweight private dashboard that reads stock symbols from Google Sheets, fetches recent stock news from GNews, and generates AI summaries with Gemini.
 
-## Features
+## Current Features
 
-- **Google Sheets integration**: Stock list (symbol, name, avg price, qty) and YouTube channels
-- **News aggregation**: Latest news for each stock via GNews API (14-day window)
-- **YouTube analysis**: Fetches transcripts from configured channels and extracts stock mentions/recommendations
-- **Last updated timestamp**: Shows when the sheet data was fetched
-- **Authentication**: Username/password with JWT
-- **Sample sheet format**: Reference modal on the dashboard
+- Google Sheets input (`Stocks` tab with only `Symbol` and `Name`)
+- News fetch from GNews for each symbol
+- News window: last 7 days
+- Max 2 news articles per stock
+- Throttled news calls (1s delay between stock requests) to reduce rate-limit errors
+- Portfolio Summary section with:
+  - Positives
+  - Negatives
+  - Risky signals
+- No login/auth flow in the UI
+- Deployable to Google Cloud Run
 
-## Quick Start
+## Project Structure
+
+```text
+StockDashboard/
+├── backend/                  # FastAPI app
+│   ├── app/
+│   │   ├── api/routers/      # Dashboard API routes
+│   │   ├── core/             # App settings
+│   │   ├── db/               # SQLAlchemy setup
+│   │   ├── models/           # Pydantic models
+│   │   └── services/         # Google Sheets, GNews, Gemini services
+│   ├── requirements.txt
+│   └── .env                  # Local backend env
+├── frontend/                 # React + Vite + Tailwind
+├── sample-sheet/             # Sample CSVs
+├── Dockerfile                # Multi-stage frontend+backend image
+└── cloudbuild.yaml           # Cloud Build + Cloud Run deploy
+```
+
+## Google Sheet Format
+
+Create one tab named `Stocks` with range `Stocks!A2:B`:
+
+| Symbol | Name |
+|--------|------|
+| AAPL   | Apple Inc |
+| MSFT   | Microsoft Corporation |
+| GOOGL  | Alphabet Inc |
+
+Share the sheet with your service account email (Viewer access is enough).
+
+## Environment Variables (Backend)
+
+Create `backend/.env`:
+
+```env
+ALLOWED_USERNAME=optional
+ALLOWED_PASSWORD=optional
+SECRET_KEY=change-me-in-production-use-openssl-rand-hex-32
+
+GOOGLE_SHEETS_CREDENTIALS_PATH=credentials.json
+# OR use base64 json for cloud
+# GOOGLE_SHEETS_CREDENTIALS_JSON=<base64-service-account-json>
+
+GNEWS_API_KEY=your_gnews_key
+GEMINI_API_KEY=your_gemini_key
+
+DEBUG=false
+CORS_ORIGINS=http://localhost:5173,http://localhost:4173,http://localhost:3000
+```
+
+Note: login is currently bypassed, so `ALLOWED_USERNAME` and `ALLOWED_PASSWORD` are not required for dashboard access.
+
+## Run Locally
 
 ### 1. Backend
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-cp ../.env.example .env
-# Edit .env with your API keys
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ### 2. Frontend
 
+Open another terminal:
+
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev -- --host 0.0.0.0 --port 4173
 ```
 
-Open http://localhost:5173. Register a user, then enter your Google Sheet ID.
+### 3. Open App
 
-### 3. Google Sheet Setup
+- Frontend: [http://localhost:4173](http://localhost:4173)
+- Backend health: [http://localhost:8000/health](http://localhost:8000/health)
 
-Create a Google Sheet with two tabs:
+### 4. Use Dashboard
 
-**Stocks** (range `Stocks!A2:E`):
+1. Paste Google Sheet ID
+2. Click `Fetch Dashboard`
+3. See Portfolio Summary + per-stock news cards
 
-| Symbol | Name | Avg Price | Qty |
-|--------|------|-----------|-----|
-| AAPL   | Apple Inc | 175.50 | 10 |
-| MSFT   | Microsoft | 380.25 | 5 |
+## Deploy on Public Cloud (Google Cloud Run)
 
-**YouTube** (range `YouTube!A2:B`):
+### Prerequisites
 
-| Channel Name | Channel ID |
-|--------------|-------------|
-| @FinancialEducation | UCnMn36GT_H0d-wsO-2O-ptQ |
-| @GrahamStephan | UCV6KDgJskWaEckne5aPA0aQ |
+- Google Cloud project
+- Billing enabled
+- `gcloud` CLI authenticated
+- APIs enabled:
+  - Cloud Run API
+  - Cloud Build API
+  - Artifact Registry API
 
-Share the sheet with your **Google Service Account** email (from credentials.json) with "Viewer" access.
-
-### 4. API Keys
-
-- **Google Sheets**: Create a service account in Google Cloud Console, enable Sheets API, download JSON key.
-- **Google Gemini**: For AI summarization & YouTube analysis. Free key at [Google AI Studio](https://aistudio.google.com/apikey).
-- **GNews**: Free key at [gnews.io](https://gnews.io/) for news fetching.
-- **YouTube**: Enable YouTube Data API v3 in Google Cloud Console, create an API key.
-
-## Deploy to Google Cloud Run
+### 1. Set project
 
 ```bash
-# Set project
 gcloud config set project YOUR_PROJECT_ID
+```
 
-# Build and deploy
+### 2. Build and deploy
+
+```bash
 gcloud builds submit --config=cloudbuild.yaml
+```
 
-# Set secrets (recommended)
+This builds the container and deploys service `stock-dashboard` to Cloud Run.
+
+### 3. Set environment variables on Cloud Run
+
+```bash
 gcloud run services update stock-dashboard \
-  --set-env-vars="SECRET_KEY=xxx,GNEWS_API_KEY=xxx,YOUTUBE_API_KEY=xxx" \
-  --region=us-central1
-
-# For Google Sheets credentials, use Secret Manager or base64 in env
+  --region=us-central1 \
+  --set-env-vars="SECRET_KEY=replace_me,GNEWS_API_KEY=your_gnews_key,GEMINI_API_KEY=your_gemini_key,CORS_ORIGINS=https://YOUR_DOMAIN"
 ```
 
-For private access, use `--no-allow-unauthenticated` in `cloudbuild.yaml` and configure Cloud IAP or restrict by VPC.
+### 4. Configure Google Sheets credentials for Cloud Run
 
-**Note**: The default SQLite database does not persist across Cloud Run restarts. For production, consider Cloud SQL or set `DATABASE_URL` to a persistent volume.
+Use either of these approaches:
 
-## Project Structure
+1. Secret Manager + mounted file (recommended)
+2. Base64 JSON in env var `GOOGLE_SHEETS_CREDENTIALS_JSON`
 
+If using base64:
+
+```bash
+base64 -i credentials.json
 ```
-StockDashboard/
-├── backend/           # FastAPI app
-│   ├── app/
-│   │   ├── api/       # Auth, dashboard routes
-│   │   ├── core/      # Config
-│   │   ├── db/        # SQLite, models
-│   │   ├── models/    # Pydantic models
-│   │   └── services/ # Sheets, news, YouTube
-│   └── requirements.txt
-├── frontend/          # React + Vite
-├── sample-sheet/      # Sample CSV files for Google Sheet import
-├── Dockerfile         # Multi-stage for Cloud Run
-├── cloudbuild.yaml    # GCP build config
-└── .env.example
-```
+
+Put output in `GOOGLE_SHEETS_CREDENTIALS_JSON`.
+
+### 5. Access public URL
+
+After deploy, Cloud Run prints service URL (for example `https://stock-dashboard-xxxxx-uc.a.run.app`).
+
+## Operational Notes
+
+- GNews free tiers can rate-limit aggressively.
+- Current backend applies 1 second delay per stock request.
+- SQLite is local/ephemeral for Cloud Run instances; current app does not depend on persistent DB for dashboard fetches.
 
 ## License
 

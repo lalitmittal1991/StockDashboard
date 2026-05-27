@@ -47,40 +47,6 @@ Respond in this exact JSON format only, no other text:
     return "No summary generated.", "N/A"
 
 
-def _analyze_transcript_sync(transcript: str, watch_symbols: list[str], video_title: str) -> str:
-    """Synchronous call to Gemini for transcript analysis."""
-    model = _init_client()
-    if not model:
-        return "[]"
-
-    symbols_str = ", ".join(sorted(watch_symbols))
-    prompt = f"""Analyze this YouTube video transcript for stock recommendations. The investor watches these symbols: {symbols_str}.
-
-Video title: {video_title}
-
-Transcript:
-{transcript[:15000]}
-
-For each stock symbol mentioned that is in the watch list, extract:
-- symbol: the ticker
-- recommendation_type: one of "buy", "sell", "hold", or "mention"
-- context: 1-2 sentences of relevant quote/context
-- confidence: "high", "medium", or "low"
-
-Respond with ONLY a JSON array, no other text. Example:
-[{{"symbol": "AAPL", "recommendation_type": "buy", "context": "...", "confidence": "high"}}]
-If no relevant recommendations, return: []"""
-
-    try:
-        response = model.generate_content(prompt)
-        if response.text:
-            text = response.text.strip().replace("```json", "").replace("```", "")
-            return text
-    except Exception:
-        pass
-    return "[]"
-
-
 async def summarize_news(symbol: str, articles: list[dict]) -> tuple[str, str]:
     """Summarize news articles using Gemini (async)."""
     if not articles:
@@ -94,22 +60,3 @@ async def summarize_news(symbol: str, articles: list[dict]) -> tuple[str, str]:
     return await loop.run_in_executor(
         None, partial(_summarize_news_sync, symbol, articles_text)
     )
-
-
-async def analyze_transcript_for_stocks(
-    transcript: str, watch_symbols: set[str], video_title: str
-) -> list[dict]:
-    """Analyze transcript for stock recommendations using Gemini (async)."""
-    if not transcript or not watch_symbols:
-        return []
-
-    loop = asyncio.get_running_loop()
-    result = await loop.run_in_executor(
-        None,
-        partial(_analyze_transcript_sync, transcript, list(watch_symbols), video_title),
-    )
-    try:
-        data = json.loads(result)
-        return data if isinstance(data, list) else []
-    except json.JSONDecodeError:
-        return []

@@ -15,10 +15,12 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> UserInDB:
     if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"},
+        # Auth disabled path: allow anonymous dashboard usage.
+        return UserInDB(
+            id=0,
+            username="guest",
+            hashed_password="",
+            created_at=datetime.utcnow(),
         )
     token_data = decode_token(credentials.credentials)
     if not token_data or not token_data.username:

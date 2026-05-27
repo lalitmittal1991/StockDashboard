@@ -25,14 +25,13 @@ export async function login(username: string, password: string) {
   return res.json();
 }
 
-export async function fetchDashboard(spreadsheetId: string, stocksRange?: string, youtubeRange?: string) {
+export async function fetchDashboard(spreadsheetId: string, stocksRange?: string) {
   const res = await fetch(`${API_BASE}/dashboard/fetch`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({
       spreadsheet_id: spreadsheetId,
-      stocks_range: stocksRange || 'Stocks!A2:E',
-      youtube_range: youtubeRange || 'YouTube!A2:B',
+      stocks_range: stocksRange || 'Stocks!A2:B',
     }),
   });
   if (!res.ok) {

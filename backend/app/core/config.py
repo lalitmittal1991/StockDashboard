@@ -34,9 +34,6 @@ class Settings(BaseSettings):
     # Google Gemini API - for summarization & analysis (get key at https://aistudio.google.com/apikey)
     GEMINI_API_KEY: str = ""
 
-    # YouTube Data API - get from Google Cloud Console
-    YOUTUBE_API_KEY: str = ""
-
     # Database - use /tmp for Cloud Run (ephemeral) or ./ for local
     DATABASE_URL: str = "sqlite+aiosqlite:///./stock_dashboard.db"
 

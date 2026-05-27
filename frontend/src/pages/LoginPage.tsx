@@ -34,7 +34,7 @@ export default function LoginPage() {
             Stock Dashboard
           </h1>
           <p className="text-slate-400 mt-2">
-            Private news & YouTube analysis for your portfolio
+            Private news analysis for your portfolio
           </p>
         </div>
 
