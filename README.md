@@ -45,7 +45,9 @@ Create one tab named `Stocks` with range `Stocks!A2:B`:
 | MSFT   | Microsoft Corporation |
 | GOOGL  | Alphabet Inc |
 
-Share the sheet with your service account email (Viewer access is enough).
+Hybrid access is supported:
+- Private sheet: share with service account email (Viewer).
+- Public sheet: no sharing needed, just pass Sheet ID.
 
 ## Environment Variables (Backend)
 
@@ -68,6 +70,7 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:4173,http://localhost:3000
 ```
 
 Note: login is currently bypassed, so `ALLOWED_USERNAME` and `ALLOWED_PASSWORD` are not required for dashboard access.
+If no credentials are provided, make sure the sheet is publicly readable.
 
 ## Run Locally
 
