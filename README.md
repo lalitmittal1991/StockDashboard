@@ -7,12 +7,9 @@ A lightweight private dashboard that reads stock symbols from Google Sheets, fet
 - Google Sheets input (`Stocks` tab with only `Symbol` and `Name`)
 - News fetch from GNews for each symbol
 - News window: last 7 days
-- Max 2 news articles per stock
+- Max 5 news articles per stock
 - Throttled news calls (1s delay between stock requests) to reduce rate-limit errors
-- Portfolio Summary section with:
-  - Positives
-  - Negatives
-  - Risky signals
+- Top Negative News Summary section with combined negative pointers across tracked stocks
 - No login/auth flow in the UI
 - Deployable to Google Cloud Run
 
@@ -164,7 +161,7 @@ npm run dev -- --host 0.0.0.0 --port 4173
 
 1. Paste Google Sheet ID
 2. Click `Fetch Dashboard`
-3. See Portfolio Summary + per-stock news cards
+3. See Top Negative News Summary + per-stock news cards
 
 ## Deploy on Public Cloud (Google Cloud Run)
 
